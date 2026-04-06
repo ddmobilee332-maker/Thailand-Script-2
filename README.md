@@ -1,0 +1,218 @@
+-- [[ JOHN'S CHAOS HUB - THAI EDITION V10 FULL ]]
+-- By: JOHN
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Kill V10",
+    LoadingTitle = "By: JOHN",
+    LoadingSubtitle = "๐",
+    ConfigurationSaving = { Enabled = true, FolderName = "JohnHubConfig", FileName = "ChaosHub" },
+    KeySystem = false
+})
+
+-- [[ DEFAULT SETTINGS ]]
+local _G = {
+    AutoBuySave = false, 
+    AutoGetGun = false,
+    AutoShoot = false,
+    V2Shoot = false,
+    V2Mode = "1 Gun",
+    AntiFriend = false,
+    AutoOrbit = false,
+    SpecificTarget = "",
+    AimPart = "HumanoidRootPart",
+    FloatingColor = Color3.fromRGB(150, 0, 255),
+    RainbowMode = false,
+    ShowTracer = false,
+    TracerColor = Color3.fromRGB(255, 255, 255),
+    TracerRainbow = false,
+    OwnerName = "Libbyeli1091"
+}
+
+local Player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+
+-- [[ RAINBOW SYSTEM ]]
+local rainbowColor = Color3.fromRGB(150, 0, 255)
+local tracerRainbowColor = Color3.fromRGB(255, 255, 255)
+task.spawn(function()
+    local h = 0
+    while task.wait() do
+        h = h + 0.005
+        if h > 1 then h = 0 end
+        if _G.RainbowMode then rainbowColor = Color3.fromHSV(h, 0.8, 1) end
+        if _G.TracerRainbow then tracerRainbowColor = Color3.fromHSV(h, 0.8, 1) end
+    end
+end)
+
+-- [[ TRACER ]]
+local TracerLine = Drawing.new("Line")
+TracerLine.Visible = false
+TracerLine.Thickness = 1.5
+TracerLine.Transparency = 1
+
+local function isFriend(targetPlayer)
+    if targetPlayer.Name == _G.OwnerName then return true end
+    if not _G.AntiFriend then return false end
+    return Player:IsFriendsWith(targetPlayer.UserId)
+end
+
+local function getBestTarget()
+    if _G.SpecificTarget ~= "" then
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p.Name == _G.OwnerName then continue end
+            if string.find(string.lower(p.Name), string.lower(_G.SpecificTarget)) or string.find(string.lower(p.DisplayName), string.lower(_G.SpecificTarget)) then
+                if p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+                    return p
+                end
+            end
+        end
+    end
+
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    for _, v in pairs(game:GetService("Players"):GetPlayers()) do
+        if v ~= Player and v.Character and v.Character:FindFirstChild(_G.AimPart) 
+           and v.Character:FindFirstChild("Humanoid") 
+           and v.Character.Humanoid.Health > 0 
+           and not isFriend(v) then
+            local distance = (v.Character[_G.AimPart].Position - Player.Character.HumanoidRootPart.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestPlayer = v
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function isSafeToShoot(targetPos)
+    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return false end
+    local origin = Player.Character.HumanoidRootPart.Position
+    local direction = (targetPos - origin).Unit * (targetPos - origin).Magnitude
+    local rayParam = RaycastParams.new()
+    rayParam.FilterDescendantsInstances = {Player.Character}
+    rayParam.FilterType = Enum.RaycastFilterType.Exclude
+    local result = workspace:Raycast(origin, direction, rayParam)
+    if result and result.Distance < 3 then return false end
+    return true
+end
+
+RunService.RenderStepped:Connect(function()
+    if _G.ShowTracer then
+        local t = getBestTarget()
+        if t and t.Character and t.Character:FindFirstChild(_G.AimPart) then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(t.Character[_G.AimPart].Position)
+            if onScreen then
+                TracerLine.From = Vector2.new(Camera.ViewportSize.X / 2, 0)
+                TracerLine.To = Vector2.new(screenPos.X, screenPos.Y)
+                TracerLine.Color = _G.TracerRainbow and tracerRainbowColor or _G.TracerColor
+                TracerLine.Visible = true
+            else TracerLine.Visible = false end
+        else TracerLine.Visible = false end
+    else TracerLine.Visible = false end
+end)
+
+local function createFloatingGUI(name, flag, special)
+    local ScreenGui = Instance.new("ScreenGui")
+    local Frame = Instance.new("Frame")
+    local Button = Instance.new("TextButton")
+    local Label = Instance.new("TextLabel")
+    local UIStroke = Instance.new("UIStroke")
+    
+    ScreenGui.Name = "Floating_" .. name
+    ScreenGui.Parent = game.CoreGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    Frame.Name = "MainFrame"
+    Frame.Parent = ScreenGui
+    Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Frame.Position = UDim2.new(0.5, -50, 0.5, -20)
+    Frame.Size = special and UDim2.new(0, 140, 0, 75) or UDim2.new(0, 110, 0, 50)
+    Frame.Active = true
+    Frame.Draggable = true
+
+    UIStroke.Parent = Frame
+    UIStroke.Thickness = 2
+    task.spawn(function()
+        while Frame.Parent do
+            UIStroke.Color = _G.RainbowMode and rainbowColor or _G.FloatingColor
+            task.wait()
+        end
+    end)
+
+    Label.Parent = Frame
+    Label.Size = UDim2.new(1, 0, 0, 20)
+    Label.BackgroundTransparency = 1
+    Label.Text = name
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.GothamBold
+
+    Button.Parent = Frame
+    Button.Position = special and UDim2.new(0.1, 0, 0.65, 0) or UDim2.new(0.1, 0, 0.45, 0)
+    Button.Size = special and UDim2.new(0.8, 0, 0.28, 0) or UDim2.new(0.8, 0, 0.45, 0)
+    Button.Text = _G[flag] and "ON" or "OFF"
+    Button.BackgroundColor3 = _G[flag] and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(40, 40, 40)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.BorderSizePixel = 0
+
+    Button.MouseButton1Click:Connect(function()
+        _G[flag] = not _G[flag]
+        Button.Text = _G[flag] and "ON" or "OFF"
+        Button.BackgroundColor3 = _G[flag] and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(40, 40, 40)
+    end)
+
+    if special then
+        local Input = Instance.new("TextBox")
+        Input.Parent = Frame
+        Input.Size = UDim2.new(0.9, 0, 0.35, 0)
+        Input.Position = UDim2.new(0.05, 0, 0.25, 0)
+        Input.PlaceholderText = "Enter target name..."
+        Input.Text = _G.SpecificTarget
+        Input.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+        Input.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Input.TextSize = 10
+        Input.FocusLost:Connect(function() _G.SpecificTarget = Input.Text end)
+    end
+
+    local hTime = 0
+    Button.MouseButton1Down:Connect(function() hTime = tick() end)
+    Button.MouseButton1Up:Connect(function() if tick() - hTime > 1.5 then ScreenGui:Destroy() end end)
+end
+
+-- TABS
+local Tab1 = Window:CreateTab("Weapon Manager", 4483362458)
+local Tab2 = Window:CreateTab("Combat", 4483362458)
+local Tab3 = Window:CreateTab("Safety", 4483362458)
+local Tab4 = Window:CreateTab("Movement", 4483362458)
+local Tab5 = Window:CreateTab("Floating UI", 4483362458)
+local Tab6 = Window:CreateTab("Tracer", 4483362458)
+
+Tab1:CreateToggle({Name = "Auto Dup Gun", CurrentValue = false, Flag = "AutoBuySave", Callback = function(V) _G.AutoBuySave = V if V then task.spawn(runAutoDup) end end})
+
+Tab2:CreateToggle({Name = "2 Shot (No Hold)", CurrentValue = false, Flag = "AutoShoot", Callback = function(V) _G.AutoShoot = V end})
+Tab2:CreateDropdown({Name = "Gun Cycle Mode", Options = {"1 Gun", "2 Guns"}, CurrentOption = {"1 Gun"}, Callback = function(O) _G.V2Mode = O[1] end})
+Tab2:CreateToggle({Name = "Rapid Fire", CurrentValue = false, Flag = "V2Shoot", Callback = function(V) _G.V2Shoot = V end})
+
+Tab3:CreateToggle({Name = "Anti Friend", CurrentValue = false, Flag = "AntiFriend", Callback = function(V) _G.AntiFriend = V end})
+
+Tab4:CreateInput({Name = "Target Player", PlaceholderText = "Enter name...", Callback = function(T) _G.SpecificTarget = T end})
+Tab4:CreateToggle({Name = "Auto Orbit", CurrentValue = false, Flag = "AutoOrbit", Callback = function(V) _G.AutoOrbit = V end})
+
+Tab5:CreateColorPicker({Name = "UI Color", Color = _G.FloatingColor, Callback = function(C) _G.FloatingColor = C end})
+Tab5:CreateToggle({Name = "Rainbow Mode", CurrentValue = false, Callback = function(V) _G.RainbowMode = V end})
+Tab5:CreateSection("Floating Buttons")
+Tab5:CreateButton({Name = "Auto Dup Button", Callback = function() createFloatingGUI("AutoDup", "AutoBuySave") end})
+Tab5:CreateButton({Name = "Shoot Button", Callback = function() createFloatingGUI("Shoot2", "AutoShoot") end})
+Tab5:CreateButton({Name = "Rapid Fire Button", Callback = function() createFloatingGUI("V2Fire", "V2Shoot") end})
+Tab5:CreateButton({Name = "Orbit Button", Callback = function() createFloatingGUI("Orbit HUD", "AutoOrbit", true) end})
+
+Tab6:CreateToggle({Name = "Enable Tracer", CurrentValue = false, Callback = function(V) _G.ShowTracer = V end})
+Tab6:CreateColorPicker({Name = "Tracer Color", Color = _G.TracerColor, Callback = function(C) _G.TracerColor = C end})
+Tab6:CreateToggle({Name = "Rainbow Tracer", CurrentValue = false, Callback = function(V) _G.TracerRainbow = V end})
+
+Rayfield:Notify({Title = "System by JOHN", Content = "Loaded Successfully ๐", Duration = 5, Image = 4483362458})
